@@ -7,7 +7,7 @@
 > trial will defy ordinary, common-sense notions of law and order, even if she can't articulate exactly how unique K.'s trial
 > will be.
 
-http://www.shmoop.com/the-trial-kafka/frau-grubach.html
+<cite>http://www.shmoop.com/the-trial-kafka/frau-grubach.html</cite>
 
 ## Usage
 
