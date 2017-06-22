@@ -1,6 +1,5 @@
 (ns grubach.core
   (:require
-   [clj-kafka.consumer.simple :as kc]
    [clj-kafka.core :as kafka]
    [cheshire.core :as json])
   (:import [kafka.javaapi.consumer SimpleConsumer]
@@ -68,10 +67,18 @@
       kafka/to-clojure
       (update  :value (fn [x] (json/decode (String. (byte-array x)) true)))))
 
+(defn fetch-request
+  [client-id topic ^Long partition offset fetch-size & {:keys [max-wait min-bytes]}]
+  (.build (doto (FetchRequestBuilder. )
+            (.clientId client-id)
+            (.addFetch topic (Integer/valueOf partition) offset fetch-size)
+            (#(when max-wait (.maxWait % max-wait)))
+            (#(when min-bytes (.minBytes % min-bytes))))))
+
 (defn message-at*
   ([consumer topic offset] (message-at consumer topic offset as-edn))
   ([consumer topic offset deserializer]
-   (-> (.fetch consumer (kc/fetch-request client-id topic 0 offset 1000000 :max-wait 300000))
+   (-> (.fetch consumer (fetch-request client-id topic 0 offset 1000000 :max-wait 300000))
        (.messageSet  topic 0)
        .iterator
        iterator-seq
