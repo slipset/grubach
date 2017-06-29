@@ -24,8 +24,6 @@
                     (Integer/valueOf buffer-size)
                     client-id)))
 
-(def kafka-consumer (consumer "kafka1.di.telenordigital.com" 9092 ))
-
 (defn topic-meta-data
   ([consumer topics] (topic-meta-data consumer topics kafka/to-clojure))
   ([consumer topics deserializer]
@@ -67,7 +65,9 @@
 (defn as-edn [message]
   (-> message
       kafka/to-clojure
-      (update  :value (fn [x] (json/decode (String. (byte-array x)) true)))))
+      (update  :value (fn [x] (json/parse-stream
+                               (java.io.InputStreamReader.
+                                (java.io.ByteArrayInputStream. (byte-array x))) true)))))
 
 (defn fetch-request
   [client-id topic ^Long partition offset fetch-size & {:keys [max-wait min-bytes]}]
@@ -78,7 +78,7 @@
             (#(when min-bytes (.minBytes % min-bytes))))))
 
 (defn message-at*
-  ([consumer topic offset] (message-at consumer topic offset as-edn))
+  ([consumer topic offset] (message-at* consumer topic offset as-edn))
   ([consumer topic offset deserializer]
    (-> (.fetch consumer (fetch-request client-id topic 0 offset 1000000 :max-wait 300000))
        (.messageSet  topic 0)
@@ -111,9 +111,7 @@
 (defn bisect [consumer topic comparator lower upper]
   (let [offset (/ (+ lower upper) 2)
         {:keys [offset value] :as event} (message-at consumer topic offset)
-        ts (t/floor (c/from-string (:timestamp value)) t/second)
-        compared (comparator ts)]
-    (println lower upper (:timestamp value) compared)
+        compared (comparator value)]
     (condp = compared
        0 event
        1 (bisect consumer topic comparator offset upper)
