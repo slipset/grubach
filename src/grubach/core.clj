@@ -1,7 +1,9 @@
 (ns grubach.core
   (:require
    [clj-kafka.core :as kafka]
-   [cheshire.core :as json])
+   [cheshire.core :as json]
+   [clj-time.core :as t]
+   [clj-time.coerce :as c])
   (:import [kafka.javaapi.consumer SimpleConsumer]
            [kafka.api FetchRequest FetchRequestBuilder PartitionOffsetRequestInfo]
            [kafka.javaapi OffsetRequest TopicMetadataRequest FetchResponse]
@@ -105,3 +107,14 @@
        .topicsMetadata
        (map #(.topic %))
        sort))
+
+(defn bisect [consumer topic comparator lower upper]
+  (let [offset (/ (+ lower upper) 2)
+        {:keys [offset value] :as event} (message-at consumer topic offset)
+        ts (t/floor (c/from-string (:timestamp value)) t/second)
+        compared (comparator ts)]
+    (println lower upper (:timestamp value) compared)
+    (condp = compared
+       0 event
+       1 (bisect consumer topic comparator offset upper)
+       -1 (bisect consumer topic comparator lower offset))))

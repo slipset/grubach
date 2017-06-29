@@ -5,5 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [clj-kafka "0.3.4"]
-                 [cheshire "5.7.1"]]
+                 [cheshire "5.7.1"]
+                 [clj-time "0.13.0"]]
   :profiles {:dev {:repl-options {:init-ns grubach.core}}})
