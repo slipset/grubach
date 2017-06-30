@@ -95,7 +95,7 @@
 (defn last-message*
   ([consumer topic] (last-message* consumer topic as-edn))
   ([consumer topic deserializer]
-   (message-at consumer topic (offset consumer topic latest) deserializer)))
+   (message-at consumer topic (dec (offset consumer topic latest)) deserializer)))
 
 (defn last-message
   ([consumer topic ] (last-message consumer topic as-edn))
