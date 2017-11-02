@@ -1,4 +1,5 @@
 (ns grubach.core
+  (:refer-clojure :exclude [filter map])
   (:require
    [clj-kafka.core :as kafka]
    [cheshire.core :as json]
@@ -92,6 +93,19 @@
   ([consumer topic offset deserializer]
    (with-leader message-at* consumer topic offset deserializer)))
 
+(defn message-from*
+  ([consumer topic offset] (message-from* consumer topic offset as-edn))
+  ([consumer topic offset deserializer]
+   (clojure.core/map deserializer (-> (.fetch consumer (fetch-request client-id topic 0 offset 100000000 :max-wait 300000))
+                         (.messageSet  topic 0)
+                         .iterator
+                         iterator-seq))))
+
+(defn message-from
+  ([consumer topic offset] (message-from consumer topic offset as-edn))
+    ([consumer topic offset deserializer]
+   (with-leader message-from* consumer topic offset deserializer)))
+
 (defn last-message*
   ([consumer topic] (last-message* consumer topic as-edn))
   ([consumer topic deserializer]
@@ -112,7 +126,15 @@
   (let [offset (/ (+ lower upper) 2)
         {:keys [offset value] :as event} (message-at consumer topic offset)
         compared (comparator value)]
-    (condp = compared
-       0 event
-       1 (bisect consumer topic comparator offset upper)
-       -1 (bisect consumer topic comparator lower offset))))
+    (println "Offset:" offset)
+    (cond (= compared 0) event
+          (pos? compared)  (bisect consumer topic comparator offset upper)
+          (neg? compared) (bisect consumer topic comparator lower offset))))
+
+(defn filter [consumer topic p lower upper]
+  (->> (range lower upper)
+       (clojure.core/map (partial message-at consumer topic))
+       (clojure.core/filter p)))
+
+(defn map [consumer topic f offset]
+  (clojure.core/map f (message-from consumer topic offset)))
